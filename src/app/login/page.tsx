@@ -104,6 +104,15 @@ export default function LoginPage() {
             Daftar di sini
           </Link>
         </p>
+
+        <div className="pt-4 border-t border-[#F1F0EB] text-center">
+          <Link
+            href="/admin/login"
+            className="text-xs font-semibold text-[#3A4D28] hover:underline"
+          >
+            🔒 Anda Pemilik Toko? Masuk ke Portal Admin
+          </Link>
+        </div>
       </div>
     </div>
   );

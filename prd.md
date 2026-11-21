@@ -240,7 +240,8 @@ ZONA BAWAH: MASTER CONTEXT & LOGIKA SISTEM TERKINI (LIVING CONTEXT)
 - **Status Arsitektur Aktif:** Next.js 14 (App Router, TypeScript) + Tailwind CSS + Supabase (Auth, Postgres, Storage) + Midtrans Snap Gateway + Vercel Production Ready.
 - **Daftar Rute Halaman Aktif:**
   - `/` : Beranda modern streetwear (Hero Banner ala SOLEX, Drop Day Countdown, Brand Bar, Curated Highlights, Shop by Category, Promo 40% OFF Banner, Value Proposition).
-  - `/catalog` : Katalog pakaian thrift dengan pencarian teks real-time, filter kategori, ukuran pakaian, grading kondisi, slider harga, dan pengurutan harga.
+  - `/catalog` : Katalog pakaian thrift dengan pencarian teks real-time, filter kategori dinamis, ukuran pakaian, grading kondisi, slider harga, dan pengurutan harga.
+  - `/drop` : Vault khusus rilis Drop Day (jadwal drop Sabtu 19:00 WIB, live countdown timer, aturan rebutan 1-of-1, dan katalog drop grails).
   - `/product/[slug]` : Detail produk thrift (Galeri foto multi-angle, pengukuran P x L centimeter riil, grading kondisi, stok 1-of-1, add to cart / quick buy, tombol WhatsApp CS otomatis).
   - `/checkout` : Formulir pengiriman Indonesia lengkap, kurir ekspedisi (JNE, SiCepat, J&T), kalkulasi ongkir, kupon voucher, integrasi pembayaran Midtrans Snap, nomor order sekuensial `TRF-YYYYMMDD-XXX`.
   - `/orders/[id]` : Invoice resmi & pelacakan nomor resi pengiriman, timeline status pesanan, dan cetak invoice.

@@ -21,6 +21,16 @@ function CatalogContent() {
   const [maxPrice, setMaxPrice] = useState(2000000);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
+  // Real-time synchronization with URL parameters (e.g. from Navbar or CategoryGrid)
+  React.useEffect(() => {
+    const cat = searchParams.get("cat");
+    if (cat) {
+      setSelectedCategory(cat);
+    } else {
+      setSelectedCategory("all");
+    }
+  }, [searchParams]);
+
   // Sizes available
   const sizes = ["S", "M", "L", "XL", "XXL", "W32", "One Size"];
 

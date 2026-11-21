@@ -2,9 +2,9 @@
 Status: SELESAI DITERAPKAN & TERVERIFIKASI (BUILD CHECK PASSED)
 Tanggal: 21 November 2026
 
-Pembaruan Keamanan Akses Portal Admin:
-1. Pemasangan Route Guard 403 di `src/app/admin/layout.tsx`.
-2. Pembuatan gerbang otentikasi admin terisolasi di `src/app/admin/login/page.tsx`.
-3. Pembersihan tombol eskalasi hak istimewa Super Admin di `src/app/login/page.tsx`.
-4. Penyembunyian tautan internal admin dari `src/components/Footer.tsx` dan `src/components/Navbar.tsx`.
+Pembaruan Menu Kategori & Drop Day:
+1. Pembuatan rute halaman khusus Drop Day (`/drop`) dengan live countdown, jadwal drop Sabtu 19:00 WIB, aturan rebutan 15 menit, dan integrasi WhatsApp reminder.
+2. Pembuatan Interactive Category Dropdown / Mega Menu di Navbar dengan foto dan jumlah item.
+3. Sinkronisasi real-time URL `searchParams` di `src/app/catalog/page.tsx` menggunakan `useEffect` agar filter kategori langsung aktif saat diklik dari menu mana saja.
+4. Penambahan pintu masuk resmi ke `/admin/login` pada halaman `/login` dan navbar dropdown khusus pemilik toko.
 Intisari telah disinkronkan ke zona bawah `prd.md`.

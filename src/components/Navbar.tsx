@@ -13,26 +13,26 @@ import {
   ShieldCheck, 
   LogOut,
   Flame,
-  LayoutDashboard
+  LayoutDashboard,
+  ChevronDown,
+  Layers,
+  Lock
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useAuth } from "@/context/AuthContext";
+import { useStore } from "@/context/StoreContext";
 
 export default function Navbar({ onOpenSearch }: { onOpenSearch?: () => void }) {
   const pathname = usePathname();
   const { totalItems, setIsCartOpen } = useCart();
   const { totalWishlist } = useWishlist();
   const { user, isAdmin, logout } = useAuth();
+  const { categories } = useStore();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-
-  const navLinks = [
-    { label: "Home", href: "/" },
-    { label: "Katalog", href: "/catalog" },
-    { label: "Kategori", href: "/catalog?view=categories" },
-    { label: "Drop Day 🔥", href: "/#drop-section" },
-  ];
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
 
   return (
     <>
@@ -73,23 +73,100 @@ export default function Navbar({ onOpenSearch }: { onOpenSearch?: () => void }) 
 
             {/* Desktop Navigation Links */}
             <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold text-[#3F3F46]">
-              {navLinks.map((link) => {
-                const isActive = pathname === link.href;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`hover:text-[#0F1012] transition-colors py-1 relative ${
-                      isActive ? "text-[#0F1012] font-bold" : ""
-                    }`}
+              <Link
+                href="/"
+                className={`hover:text-[#0F1012] transition-colors py-1 relative ${
+                  pathname === "/" ? "text-[#0F1012] font-bold" : ""
+                }`}
+              >
+                Home
+                {pathname === "/" && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#3A4D28] rounded-full" />
+                )}
+              </Link>
+
+              <Link
+                href="/catalog"
+                className={`hover:text-[#0F1012] transition-colors py-1 relative ${
+                  pathname === "/catalog" ? "text-[#0F1012] font-bold" : ""
+                }`}
+              >
+                Katalog
+                {pathname === "/catalog" && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#3A4D28] rounded-full" />
+                )}
+              </Link>
+
+              {/* Interactive Kategori Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                  onMouseEnter={() => setCategoryDropdownOpen(true)}
+                  className={`hover:text-[#0F1012] transition-colors py-1 flex items-center gap-1.5 ${
+                    categoryDropdownOpen ? "text-[#0F1012] font-bold" : ""
+                  }`}
+                >
+                  <span>Kategori</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${categoryDropdownOpen ? "rotate-180 text-[#3A4D28]" : ""}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {categoryDropdownOpen && (
+                  <div
+                    onMouseLeave={() => setCategoryDropdownOpen(false)}
+                    className="absolute left-0 mt-2 w-72 bg-white border border-[#E5E4DE] rounded-2xl shadow-2xl p-3 z-50 animate-fade-in space-y-1"
                   >
-                    {link.label}
-                    {isActive && (
-                      <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#3A4D28] rounded-full" />
-                    )}
-                  </Link>
-                );
-              })}
+                    <div className="px-3 py-1.5 border-b border-[#F1F0EB] text-[10px] font-black uppercase tracking-wider text-[#3A4D28]">
+                      PILIH KATEGORI THRIFT
+                    </div>
+                    {categories.map((cat) => (
+                      <Link
+                        key={cat.id}
+                        href={`/catalog?cat=${cat.slug}`}
+                        onClick={() => setCategoryDropdownOpen(false)}
+                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#FAF9F5] transition group"
+                      >
+                        <img
+                          src={cat.imageUrl || "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=100"}
+                          alt={cat.name}
+                          className="w-10 h-10 object-cover rounded-lg bg-[#FAF9F5] border border-[#E5E4DE]"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-bold text-xs text-[#0F1012] group-hover:text-[#3A4D28] block truncate">
+                            {cat.name}
+                          </span>
+                          <span className="text-[10px] text-[#71717A] block">
+                            {cat.itemCount || 8} Pilihan Item
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                    <div className="pt-2 border-t border-[#F1F0EB]">
+                      <Link
+                        href="/catalog"
+                        onClick={() => setCategoryDropdownOpen(false)}
+                        className="block text-center text-xs font-bold text-[#0F1012] hover:text-[#3A4D28] py-1"
+                      >
+                        Lihat Semua Produk →
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Dedicated Drop Day Link */}
+              <Link
+                href="/drop"
+                className={`hover:text-[#0F1012] transition-colors py-1 flex items-center gap-1.5 relative ${
+                  pathname === "/drop" ? "text-[#0F1012] font-bold" : ""
+                }`}
+              >
+                <span>Drop Day</span>
+                <span className="text-amber-500 animate-pulse text-xs">🔥</span>
+                {pathname === "/drop" && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#3A4D28] rounded-full" />
+                )}
+              </Link>
             </nav>
           </div>
 
@@ -199,7 +276,7 @@ export default function Navbar({ onOpenSearch }: { onOpenSearch?: () => void }) 
                         href="/login"
                         className="flex items-center gap-2 px-4 py-2.5 text-[#0F1012] font-bold hover:bg-[#FAF9F5] transition"
                       >
-                        Masuk (Login)
+                        Masuk (Login Pelanggan)
                       </Link>
                       <Link
                         href="/register"
@@ -207,6 +284,15 @@ export default function Navbar({ onOpenSearch }: { onOpenSearch?: () => void }) 
                       >
                         Daftar Akun Baru
                       </Link>
+                      <div className="border-t border-[#F1F0EB] mt-1 pt-1">
+                        <Link
+                          href="/admin/login"
+                          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#3A4D28] hover:bg-[#FAF9F5] transition"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          Portal Khusus Pemilik Toko
+                        </Link>
+                      </div>
                     </>
                   )}
                 </div>
@@ -217,18 +303,39 @@ export default function Navbar({ onOpenSearch }: { onOpenSearch?: () => void }) 
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-[#E5E4DE] bg-[#FAF9F5] px-6 py-5 space-y-4 animate-fade-in">
+          <div className="lg:hidden border-t border-[#E5E4DE] bg-[#FAF9F5] px-6 py-5 space-y-4 animate-fade-in max-h-[80vh] overflow-y-auto">
             <div className="flex flex-col space-y-3 font-semibold text-base text-[#111111]">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="py-1 hover:text-[#3A4D28] transition"
-                >
-                  {link.label}
-                </Link>
-              ))}
+              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="py-1 hover:text-[#3A4D28] transition">
+                Home
+              </Link>
+              <Link href="/catalog" onClick={() => setMobileMenuOpen(false)} className="py-1 hover:text-[#3A4D28] transition">
+                Katalog Lengkap
+              </Link>
+              <Link href="/drop" onClick={() => setMobileMenuOpen(false)} className="py-1 flex items-center justify-between text-amber-700 font-bold">
+                <span>Drop Day Release 🔥</span>
+                <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Sabtu 19:00 WIB</span>
+              </Link>
+
+              {/* Mobile Category List Accordion */}
+              <div className="pt-2 border-t border-[#E5E4DE]">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#3A4D28] block mb-2">
+                  KATEGORI THRIFT
+                </span>
+                <div className="grid grid-cols-1 gap-1 text-xs">
+                  {categories.map((cat) => (
+                    <Link
+                      key={cat.id}
+                      href={`/catalog?cat=${cat.slug}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="py-1.5 px-2 rounded-lg hover:bg-white text-[#3F3F46] font-medium flex items-center justify-between"
+                    >
+                      <span>{cat.name}</span>
+                      <span className="text-[10px] text-[#A1A1AA]">{cat.itemCount || 8} pcs</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
               <div className="pt-3 border-t border-[#E5E4DE] flex flex-col gap-2">
                 <Link
                   href="/wishlist"
@@ -241,16 +348,14 @@ export default function Navbar({ onOpenSearch }: { onOpenSearch?: () => void }) 
                   </span>
                 </Link>
 
-                {isAdmin && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 text-sm text-[#3A4D28] font-bold py-1"
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    Dashboard Admin
-                  </Link>
-                )}
+                <Link
+                  href="/admin/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 text-sm text-[#3A4D28] font-bold py-1"
+                >
+                  <Lock className="w-4 h-4" />
+                  Portal Khusus Pemilik Toko
+                </Link>
               </div>
             </div>
           </div>
@@ -281,16 +386,11 @@ export default function Navbar({ onOpenSearch }: { onOpenSearch?: () => void }) 
           </div>
           <span>Keranjang</span>
         </button>
-        <Link href="/wishlist" className={`relative flex flex-col items-center gap-1 ${pathname === "/wishlist" ? "text-[#0F1012] font-bold" : ""}`}>
+        <Link href="/drop" className={`relative flex flex-col items-center gap-1 ${pathname === "/drop" ? "text-[#0F1012] font-bold" : ""}`}>
           <div className="relative">
-            <Heart className="w-5 h-5" />
-            {totalWishlist > 0 && (
-              <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-[#3A4D28] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                {totalWishlist}
-              </span>
-            )}
+            <Flame className="w-5 h-5 text-amber-500" />
           </div>
-          <span>Wishlist</span>
+          <span>Drop War</span>
         </Link>
         <Link href={user ? "/orders/my-orders" : "/login"} className={`flex flex-col items-center gap-1 ${pathname.startsWith("/login") ? "text-[#0F1012] font-bold" : ""}`}>
           <User className="w-5 h-5" />
