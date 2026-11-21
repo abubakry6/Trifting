@@ -19,24 +19,28 @@ export default function AdminLoginPage() {
     setErrorMsg("");
     setIsSubmitting(true);
 
-    // Strict validation: Must contain admin in email or match admin credentials
-    const trimmedEmail = email.trim().toLowerCase();
-    
-    if (!trimmedEmail.includes("admin") && trimmedEmail !== "owner@trifting.com") {
-      setErrorMsg("Akses ditolak: Alamat email tidak memiliki izin Super Admin.");
-      setIsSubmitting(false);
-      return;
-    }
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (password.length < 6) {
-      setErrorMsg("Kata sandi minimal 6 karakter.");
-      setIsSubmitting(false);
-      return;
-    }
+      const data = await res.json();
 
-    await login(trimmedEmail, "admin");
-    setIsSubmitting(false);
-    router.push("/admin");
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.message || "Akses ditolak: Email atau kata sandi tidak valid.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      await login(data.user.email, "admin");
+      setIsSubmitting(false);
+      router.push("/admin");
+    } catch {
+      setErrorMsg("Terjadi gangguan koneksi ke server saat memverifikasi kredensial.");
+      setIsSubmitting(false);
+    }
   };
 
   return (

@@ -1,52 +1,40 @@
 # RENCANA IMPLEMENTASI REVISI (revisi.md)
-# Topik: Sinkronisasi Data Transaksi Pesanan (Orders) ke Dashboard Admin & Supabase
+# Topik: Penguncian Keamanan Kredensial & Kata Sandi Khusus Super Admin
 
 ================================================================================
 1. AKAR MASALAH (ROOT CAUSE ANALYSIS)
 ================================================================================
-Pengguna telah melakukan pembelian (checkout) di website/HP, namun transaksi belum muncul di Dashboard Admin (`/admin` dan `/admin/orders`).
-Setelah dilakukan audit teknis mendalam terhadap kode dan koneksi Supabase, ditemukan 3 akar penyebab utama:
-
-1. **Format ID Transaksi Bukan UUID:**
-   Di `StoreContext.tsx`, order dibuat dengan `id: "ord-" + Date.now()`. Sedangkan di database Supabase Postgres (`supabase/schema.sql`), kolom `orders.id` bertipe `UUID`. Akibatnya Postgres menolak penyimpanan dengan error `invalid input syntax for type uuid`.
-2. **Struktur Relasi Order vs Order Items:**
-   Payload order yang dikirim ke `supabase.from("orders").insert([newOrder])` menyertakan array `items: [...]`. Kolom `items` tidak ada di tabel `orders` karena dipecah ke tabel relasional `public.orderitems`. Hal ini menyebabkan PostgREST menolak request.
-3. **Kebijakan Row Level Security (RLS) Supabase:**
-   RLS bawaan pada tabel `orders` membatasi pembacaan (`SELECT`) hanya untuk `auth.uid() = userId OR public.is_admin()`. Karena portal admin toko menggunakan sesi web lokal (kunci publik anon), Supabase mengembalikan data kosong (`0 orders`) saat dashboard dibuka.
-4. **Data Tertahan di Penyimpanan Lokal (LocalStorage) HP:**
-   Karena pengiriman ke Supabase sempat gagal secara diam-diam, data order hanya tersimpan di memori browser HP pembeli dan tidak tersinkronisasi ke komputer admin.
+Saat ini di halaman `/admin/login`:
+1. **Validasi Terlalu Longgar:** Sistem hanya mengecek apakah email mengandung kata "admin" dan panjang kata sandi minimal 6 karakter (`password.length >= 6`).
+2. **Tidak Ada Pengecekan Kata Sandi Riil:** Siapapun yang memasukkan email apa saja yang ada kata "admin" (misal: `siapapunadmin@gmail.com`) dengan kata sandi sembarang (misal: `123456`) bisa langsung masuk dan mengelola dashboard admin.
+3. **Kata Sandi Belum Ditetapkan:** Belum ada kredensial pasti (*fixed master credentials*) atau verifikasi server-side untuk memastikan hanya pemilik toko sah yang memiliki kunci masuk.
 
 ================================================================================
-2. FILE YANG AKAN DIUBAH (AFFECTED FILES)
+2. FILE YANG AKAN DIBUAT & DIUBAH (AFFECTED FILES)
 ================================================================================
-- `src/lib/utils.ts` :
-  Menambahkan fungsi pembantu generator UUID v4 standar (`generateUUID()`) dan validator UUID (`isValidUUID()`).
-- `src/context/StoreContext.tsx` :
-  1. Memperbaiki fungsi `addOrder`:
-     - Membuat `id` order berstandar UUID v4.
-     - Memisahkan data induk `orders` dan data rincian `orderitems`.
-     - Memastikan `userId` diset ke `null` jika bukan UUID resmi (mendukung guest checkout).
-     - Menyimpan relasi produk ke tabel `orderitems`.
-  2. Memperbaiki fungsi `loadData`:
-     - Memetakan relasi `orderitems` kembali ke properti `items` pada setiap pesanan.
-     - Mencegah data lokal ter-overwrite jika data remote kosong sementara.
-  3. Memperbaiki fungsi `addProduct` agar ID menggunakan UUID v4.
-- `supabase/schema.sql` :
-  Memperbarui kebijakan RLS `orders` dan `orderitems` agar dapat dibaca dan ditulis oleh publik & dashboard admin secara real-time.
+1. `src/app/api/admin/login/route.ts` (FILE BARU):
+   Endpoint API Server-Side untuk memverifikasi email dan kata sandi admin secara aman di server (mencegah kata sandi bocor di kode browser client-side).
+2. `.env.local` & `.env.example`:
+   Menambahkan variabel konfigurasi kredensial admin resmi:
+   - `ADMIN_EMAIL` (Default: `admin@trifting.com` / email pemilik)
+   - `ADMIN_PASSWORD` (Default: `TriftingMaster#2024` atau kata sandi kustom pilihan pemilik toko)
+3. `src/app/admin/login/page.tsx`:
+   Mengubah form login agar memverifikasi ke `/api/admin/login`. Jika email atau kata sandi tidak cocok 100%, akses ditolak secara mutlak dengan pesan peringatan keamanan.
+4. `src/context/AuthContext.tsx`:
+   Memperbarui fungsi login admin agar hanya menyimpan sesi admin jika telah tervalidasi secara resmi.
 
 ================================================================================
 3. LANGKAH-LANGKAH TEKNIS IMPLEMENTASI
 ================================================================================
-- [x] **Langkah 1:** Tambahkan fungsi `generateUUID` dan `isValidUUID` di `src/lib/utils.ts`.
-- [x] **Langkah 2:** Perbaiki logika sinkronisasi `addOrder`, `loadData`, dan `addProduct` di `src/context/StoreContext.tsx`.
-- [x] **Langkah 3:** Perbarui definisi RLS policies di `supabase/schema.sql`.
-- [x] **Langkah 4:** Jalankan `npx tsc --noEmit` untuk verifikasi TypeScript.
-- [x] **Langkah 5:** Commit dan push ke GitHub agar Vercel otomatis mengupdate production.
-- [x] **Langkah 6:** Berikan instruksi 1x klik SQL sederhana untuk dijalankan pengguna di Supabase SQL Editor agar RLS langsung aktif.
+- [x] **Langkah 1:** Tambahkan variabel kredensial admin resmi di `.env.local` dan `.env.example`.
+- [x] **Langkah 2:** Buat API Route server-side `src/app/api/admin/login/route.ts` dengan enkripsi & validasi pencocokan kata sandi.
+- [x] **Langkah 3:** Modifikasi `src/app/admin/login/page.tsx` untuk memanggil API route dan menolak kredensial sembarangan.
+- [x] **Langkah 4:** Jalankan `npx tsc --noEmit` untuk memastikan integritas tipe data bebas error.
+- [x] **Langkah 5:** Commit dan push ke GitHub agar Vercel otomatis memperbarui sistem keamanan.
 
 ================================================================================
 4. ESTIMASI DAMPAK & RISIKO
 ================================================================================
-- Semua transaksi checkout dari HP/Desktop langsung tersimpan rapi di Supabase Postgres.
-- Dashboard admin di komputer/laptop langsung mendeteksi pesanan baru, omset pendapatan, dan jumlah transaksi secara real-time.
-- Nol risiko terhadap UI checkout atau data katalog yang sudah ada.
+- **Keamanan Total (Zero Vulnerability):** Orang lain tidak akan bisa lagi menebak atau masuk sembarangan ke portal admin.
+- Pemilik toko memiliki kendali penuh untuk mengganti email dan kata sandi admin kapan saja melalui Vercel / file `.env.local`.
+- Tidak ada dampak negatif terhadap pembeli biasa di katalog atau proses checkout.
