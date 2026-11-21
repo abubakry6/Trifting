@@ -246,11 +246,14 @@ ZONA BAWAH: MASTER CONTEXT & LOGIKA SISTEM TERKINI (LIVING CONTEXT)
   - `/orders/[id]` : Invoice resmi & pelacakan nomor resi pengiriman, timeline status pesanan, dan cetak invoice.
   - `/orders/my-orders` : Portal riwayat belanja pelanggan.
   - `/wishlist` : Vault produk incaran pribadi pelanggan.
-  - `/login` & `/register` : Otentikasi Supabase dengan tombol Quick Demo switch (Customer & Admin).
-  - `/admin` : Dashboard metrik penjualan 3-kolom (Omset, Total Order, Rasio Thrift Sold Out).
+  - `/login` & `/register` : Otentikasi khusus pelanggan/customer (bersih tanpa tombol demo admin).
+  - `/admin/login` : Gerbang login terisolasi khusus Super Admin (kredensial & verifikasi admin).
+  - `/admin` : Dashboard metrik penjualan 3-kolom (dilindungi Route Guard 403).
   - `/admin/products` : Manajemen CRUD inventaris pakaian thrift (tambah produk, upload foto, ukuran PxL, grade, toggle status).
   - `/admin/orders` : Kelola pesanan, ubah status order, input resi ekspedisi, dan cetak Label Pengiriman Thermal.
   - `/admin/promos` : Kelola voucher diskon kampanye promo drop.
   - `/admin/reports` : Laporan analitik keuangan dan ekspor file CSV.
 - **Skema Database Berjalan:** SQL Schema Postgres di `supabase/schema.sql` (7 tabel: `profiles`, `categories`, `products`, `promotions`, `orders`, `orderitems`, `wishlists`, triggers auth & RLS policies).
-- **Log Pembaruan Resmi:** Seluruh kode aplikasi telah berhasil dibangun dan lulus verifikasi `npm run build` (15 rute static & dynamic pages) tanpa error.
+- **Log Pembaruan Resmi:**
+  - v1.0.0: Pembangunan arsitektur lengkap toko dan dashboard admin.
+  - v1.0.1: Security Hardening (Penguncian portal admin dengan Route Guard 403, gerbang `/admin/login`, pembersihan tombol demo admin publik, dan isolasi link internal dari footer/navbar).

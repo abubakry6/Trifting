@@ -69,7 +69,7 @@ export default function Footer() {
 
       {/* Main Footer Links */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           
           {/* Brand Info */}
           <div className="lg:col-span-2 space-y-4">
@@ -127,11 +127,11 @@ export default function Footer() {
 
           {/* Bantuan & CS */}
           <div>
-            <h5 className="font-bold text-sm tracking-wider uppercase text-white mb-4">Bantuan</h5>
+            <h5 className="font-bold text-sm tracking-wider uppercase text-white mb-4">Bantuan & Layanan</h5>
             <ul className="space-y-2.5 text-sm text-[#A1A1AA]">
-              <li><Link href="/orders/my-orders" className="hover:text-white transition">Lacak Pesanan</Link></li>
+              <li><Link href="/orders/my-orders" className="hover:text-white transition">Lacak Pesanan Saya</Link></li>
               <li><Link href="/catalog" className="hover:text-white transition">Panduan Ukuran (Size Guide)</Link></li>
-              <li><Link href="/catalog" className="hover:text-white transition">Grading Kondisi Thrift</Link></li>
+              <li><Link href="/catalog" className="hover:text-white transition">Standar Grading Kondisi</Link></li>
               <li>
                 <a 
                   href="https://wa.me/6281234567890?text=Halo%20Trifting%20Official,%20saya%20butuh%20bantuan%20pesanan"
@@ -142,17 +142,6 @@ export default function Footer() {
                   WhatsApp CS <ArrowUpRight className="w-3.5 h-3.5" />
                 </a>
               </li>
-            </ul>
-          </div>
-
-          {/* Admin & Portal */}
-          <div>
-            <h5 className="font-bold text-sm tracking-wider uppercase text-white mb-4">Internal</h5>
-            <ul className="space-y-2.5 text-sm text-[#A1A1AA]">
-              <li><Link href="/admin" className="hover:text-white transition">Dashboard Admin</Link></li>
-              <li><Link href="/admin/products" className="hover:text-white transition">Kelola Produk & Foto</Link></li>
-              <li><Link href="/admin/orders" className="hover:text-white transition">Kelola Pengiriman & Resi</Link></li>
-              <li><Link href="/admin/reports" className="hover:text-white transition">Laporan Penjualan</Link></li>
             </ul>
           </div>
 

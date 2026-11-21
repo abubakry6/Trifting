@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, Lock, ArrowRight, ShieldCheck } from "lucide-react";
+import { User, Lock, ArrowRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
@@ -16,23 +16,14 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await login(email);
+    await login(email, "customer");
     setIsSubmitting(false);
-    if (email.toLowerCase().includes("admin")) {
-      router.push("/admin");
-    } else {
-      router.push("/");
-    }
+    router.push("/catalog");
   };
 
-  const handleQuickDemo = (role: "admin" | "customer") => {
-    if (role === "admin") {
-      login("admin@trifting.com", "admin");
-      router.push("/admin");
-    } else {
-      login("dimas.customer@gmail.com", "customer");
-      router.push("/catalog");
-    }
+  const handleQuickDemoCustomer = () => {
+    login("dimas.customer@gmail.com", "customer");
+    router.push("/catalog");
   };
 
   return (
@@ -52,25 +43,17 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Quick Demo Login Buttons */}
-        <div className="p-3 bg-[#FAF9F5] rounded-2xl border border-[#E5E4DE] space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-wider text-[#3A4D28] block text-center">
-            PILIHAN LOGIN CEPAT (INSTANT DEMO)
+        {/* Quick Demo Customer Button */}
+        <div className="p-3 bg-[#FAF9F5] rounded-2xl border border-[#E5E4DE] text-center">
+          <span className="text-[10px] font-black uppercase tracking-wider text-[#3A4D28] block mb-1.5">
+            PILIHAN LOGIN CEPAT (CUSTOMER)
           </span>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              onClick={() => handleQuickDemo("customer")}
-              className="py-2.5 px-3 bg-white border border-[#E5E4DE] hover:border-[#0F1012] font-bold text-[#0F1012] rounded-xl transition shadow-sm"
-            >
-              Sebagai Customer
-            </button>
-            <button
-              onClick={() => handleQuickDemo("admin")}
-              className="py-2.5 px-3 bg-[#3A4D28] hover:bg-[#2D3B22] text-white font-bold rounded-xl transition shadow-sm"
-            >
-              Sebagai Super Admin
-            </button>
-          </div>
+          <button
+            onClick={handleQuickDemoCustomer}
+            className="w-full py-2 bg-white border border-[#E5E4DE] hover:border-[#0F1012] font-bold text-xs text-[#0F1012] rounded-xl transition shadow-sm"
+          >
+            Masuk sebagai Customer Demo
+          </button>
         </div>
 
         {/* Main Form */}

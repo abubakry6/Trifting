@@ -207,15 +207,6 @@ export default function Navbar({ onOpenSearch }: { onOpenSearch?: () => void }) 
                       >
                         Daftar Akun Baru
                       </Link>
-                      <div className="border-t border-[#F1F0EB] mt-1 pt-1">
-                        <Link
-                          href="/admin"
-                          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#3A4D28] hover:bg-[#FAF9F5] transition"
-                        >
-                          <LayoutDashboard className="w-3.5 h-3.5" />
-                          Portal Khusus Admin
-                        </Link>
-                      </div>
                     </>
                   )}
                 </div>
@@ -249,14 +240,17 @@ export default function Navbar({ onOpenSearch }: { onOpenSearch?: () => void }) 
                     {totalWishlist}
                   </span>
                 </Link>
-                <Link
-                  href="/admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 text-sm text-[#3A4D28] font-bold py-1"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard Admin
-                </Link>
+
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 text-sm text-[#3A4D28] font-bold py-1"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard Admin
+                  </Link>
+                )}
               </div>
             </div>
           </div>

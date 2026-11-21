@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   LayoutDashboard, 
   Shirt, 
@@ -13,15 +13,80 @@ import {
   Menu, 
   X,
   ExternalLink,
-  ShieldAlert
+  ShieldAlert,
+  Lock,
+  LogOut
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, isAdmin, isLoading, logout } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  // Exclude /admin/login from the guard so admins can actually access the login page
+  const isLoginPage = pathname === "/admin/login";
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  // 1. Loading State
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0F1012] text-white flex flex-col items-center justify-center p-4">
+        <div className="w-12 h-12 rounded-full border-4 border-[#3A4D28] border-t-transparent animate-spin mb-4" />
+        <p className="text-xs uppercase font-bold tracking-widest text-[#A1A1AA]">
+          Memverifikasi Hak Akses Keamanan Admin...
+        </p>
+      </div>
+    );
+  }
+
+  // 2. Route Guard: Access Denied if not logged in or not admin
+  if (!user || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-[#0F1012] text-[#FAF9F5] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#161719] border border-[#27272A] rounded-3xl p-8 text-center space-y-6 shadow-2xl animate-fade-in">
+          <div className="w-16 h-16 rounded-full bg-red-950/60 border border-red-500/30 text-red-400 flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-red-400 bg-red-950/50 px-3 py-1 rounded-full border border-red-900/50">
+              403 • ACCESS RESTRICTED
+            </span>
+            <h2 className="text-2xl font-black text-white tracking-tight">
+              Akses Khusus Pemilik Toko
+            </h2>
+            <p className="text-xs text-[#A1A1AA] leading-relaxed">
+              Halaman ini dilindungi protokol keamanan. Anda harus masuk menggunakan akun Super Admin resmi Trifting Official untuk mengakses portal ini.
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <Link
+              href="/admin/login"
+              className="w-full py-3.5 bg-[#3A4D28] hover:bg-[#4D6635] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+            >
+              <Lock className="w-4 h-4" />
+              <span>Login ke Portal Admin</span>
+            </Link>
+
+            <Link
+              href="/"
+              className="w-full py-3 bg-[#0F1012] hover:bg-[#27272A] border border-[#27272A] text-[#A1A1AA] hover:text-white font-semibold text-xs rounded-xl transition block"
+            >
+              Kembali ke Beranda Toko
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Authenticated Admin View
   const adminNav = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Kelola Produk", href: "/admin/products", icon: Shirt },
@@ -98,14 +163,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Bottom Actions */}
         <div className="pt-6 border-t border-[#27272A] space-y-3">
-          <div className="flex items-center gap-3 text-xs">
-            <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center font-bold text-white">
-              A
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2.5 truncate">
+              <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center font-bold text-white flex-shrink-0">
+                A
+              </div>
+              <div className="truncate">
+                <span className="font-bold text-white block truncate">{user.fullName}</span>
+                <span className="text-[10px] text-[#4D6635] font-bold block uppercase tracking-wider">Super Admin</span>
+              </div>
             </div>
-            <div className="truncate">
-              <span className="font-bold text-white block truncate">Super Admin</span>
-              <span className="text-[10px] text-[#A1A1AA] block">admin@trifting.com</span>
-            </div>
+
+            <button
+              onClick={() => {
+                logout();
+                router.push("/");
+              }}
+              className="p-1.5 text-[#71717A] hover:text-red-400 transition"
+              title="Logout Admin"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
 
           <Link
