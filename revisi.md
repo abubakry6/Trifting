@@ -1,46 +1,38 @@
 # RENCANA IMPLEMENTASI REVISI (revisi.md)
-# Topik: Pembuatan Bucket Storage Supabase & Fitur Upload Foto Langsung di Modal Admin
+# Topik: Sinkronisasi Produk Admin ke Tampilan Pelanggan (Homepage & Katalog) via Supabase RLS
 
 ================================================================================
-1. AKAR MASALAH (ROOT CAUSE ANALYSIS DARI DUA TANGKAPAN LAYAR)
+1. AKAR MASALAH (ROOT CAUSE ANALYSIS)
 ================================================================================
-Berdasarkan 2 foto terbaru yang Anda kirim:
-1. **Foto 1 (Halaman Storage Supabase):**
-   Anda membuka halaman *Storage > Files*, tetapi di sana tertulis *"Create a file bucket"* dengan tombol hijau `+ New bucket`. Artinya **belum ada folder wadah (bucket) penyimpanan foto yang dibuat di Supabase Anda**. Tanpa bucket, file foto belum memiliki tempat tersimpan di cloud Supabase.
-2. **Foto 2 (Halaman Table Editor Products):**
-   Tabel `products` masih kosong (0 records) karena script SQL Seed pengisi katalog pakaian belum dieksekusi di menu SQL Editor.
-3. **Kendala Pengalaman Pengguna (User Experience):**
-   Saat ini admin harus menyalin URL teks secara manual. Hal ini menyulitkan pemilik toko yang ingin langsung memilih foto dari galeri HP atau folder laptop saat menambah produk.
+Pengguna telah berhasil menambahkan produk di dashboard admin (`/admin/products`), namun produk tersebut belum muncul di tampilan pelanggan (beranda toko `/` dan katalog `/catalog`).
+
+Penyebab Teknis:
+1. **Kebijakan Row Level Security (RLS) pada Tabel `products`:**
+   Di Supabase, aturan tabel `products` saat ini adalah:
+   `CREATE POLICY "Products manageable by admin" ON public.products FOR ALL USING (public.is_admin());`
+   Fungsi `public.is_admin()` mengecek `auth.uid() = admin`. Karena koneksi website menggunakan kunci publik (`anon key`), `auth.uid()` bernilai kosong (null). Akibatnya, Supabase menolak penyimpanan produk ke database Supabase.
+2. **Produk Hanya Masuk ke Memori Tab Admin:**
+   Karena penyimpanan ke Supabase sempat tertolak oleh RLS, produk baru tersebut hanya tersimpan di memori browser admin lokal (sehingga terlihat di tabel admin), tetapi **tidak tersimpan di cloud Supabase**.
+3. **Akibat di Sisi Pelanggan (HP / Tab Lain):**
+   Ketika halaman pelanggan dibuka di HP atau tab lain, website mengambil data dari Supabase. Karena Supabase belum menerima produk baru tersebut, halaman pelanggan belum menampilkan produk yang baru ditambahkan.
 
 ================================================================================
-2. PANDUAN LANGKAH DI SUPABASE (HANYA 10 DETIK)
+2. FILE YANG AKAN DIUBAH (AFFECTED FILES)
 ================================================================================
-Di tab browser Supabase yang sedang Anda buka (Foto 1):
-1. Klik tombol hijau **`+ New bucket`**.
-2. Masukkan nama bucket: **`product-images`**
-3. **PENTING:** Aktifkan sakelar **`Public bucket`** (geser hingga berwarna hijau/ON agar foto bisa dilihat oleh pembeli).
-4. Klik **Save**.
-
-================================================================================
-3. RENCANA PENYEMPURNAAN KODE ADMIN TOKO
-================================================================================
-- `src/app/admin/products/page.tsx` :
-  1. Tambahkan area **Upload Foto Langsung** (bisa klik pilih file foto JPG/PNG dari HP/Laptop atau seret foto).
-  2. Sistem otomatis mengunggah file yang dipilih ke Supabase Storage bucket `product-images` dan memunculkan pratinjau (*preview*) foto langsung di modal.
-  3. Ubah input URL manual menjadi fleksibel (`type="text"`) dengan Auto-Resolver jika pengguna ingin menempel link luar/nama file.
+- `supabase/schema.sql` :
+  Memperbarui kebijakan RLS `products` dan `categories` agar mengizinkan penambahan (*INSERT*), pengeditan (*UPDATE*), dan penghapusan (*DELETE*) produk dari portal admin toko.
 - `src/context/StoreContext.tsx` :
-  Pastikan `categoryId` aman dari error foreign key (fallback null jika bukan UUID).
+  Menyempurnakan sinkronisasi data produk agar setelah `addProduct` berhasil, data produk langsung di-refresh ke seluruh komponen toko.
 
 ================================================================================
-4. LANGKAH-LANGKAH TEKNIS IMPLEMENTASI
+3. LANGKAH-LANGKAH TEKNIS IMPLEMENTASI
 ================================================================================
-- [x] **Langkah 1:** Tambahkan input file upload langsung & preview thumbnail di modal `src/app/admin/products/page.tsx`.
-- [x] **Langkah 2:** Integrasikan fungsi upload langsung ke Supabase Storage API (`supabase.storage.from("product-images").upload(...)`).
-- [x] **Langkah 3:** Jalankan `npx tsc --noEmit` untuk verifikasi TypeScript.
-- [x] **Langkah 4:** Commit & push ke GitHub agar Vercel otomatis mengupdate produksi.
+- [ ] **Langkah 1:** Perbarui RLS policy di `supabase/schema.sql` untuk `products` dan `categories`.
+- [ ] **Langkah 2:** Berikan instruksi 1x klik SQL sederhana untuk dijalankan pengguna di Supabase SQL Editor agar izin simpan produk langsung aktif di Supabase.
+- [ ] **Langkah 3:** Sinkronkan pembaruan ke GitHub & Vercel.
 
 ================================================================================
-5. ESTIMASI DAMPAK & RISIKO
+4. ESTIMASI DAMPAK & RISIKO
 ================================================================================
-- Pemilik toko bisa menambah produk baru dengan **langsung memilih foto dari galeri HP/laptop** semudah di Instagram atau Tokopedia tanpa perlu repot copy-paste link manual lagi.
-- Nol risiko terhadap transaksi checkout atau tampilan beranda.
+- Setiap produk baru yang ditambahkan dari admin akan langsung tersimpan di cloud Supabase.
+- Beranda pelanggan (`/`) dan Katalog (`/catalog`) di HP maupun laptop pembeli akan langsung menampilkan produk baru tersebut secara real-time.

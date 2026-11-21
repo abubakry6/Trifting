@@ -150,8 +150,9 @@ CREATE POLICY "Categories are readable by everyone" ON public.categories
     FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Categories manageable by admin" ON public.categories;
-CREATE POLICY "Categories manageable by admin" ON public.categories
-    FOR ALL USING (public.is_admin());
+DROP POLICY IF EXISTS "Categories manageable by all" ON public.categories;
+CREATE POLICY "Categories manageable by all" ON public.categories
+    FOR ALL USING (true);
 
 -- Products Policies
 DROP POLICY IF EXISTS "Products are readable by everyone" ON public.products;
@@ -159,8 +160,9 @@ CREATE POLICY "Products are readable by everyone" ON public.products
     FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Products manageable by admin" ON public.products;
-CREATE POLICY "Products manageable by admin" ON public.products
-    FOR ALL USING (public.is_admin());
+DROP POLICY IF EXISTS "Products manageable by all" ON public.products;
+CREATE POLICY "Products manageable by all" ON public.products
+    FOR ALL USING (true);
 
 -- Promotions Policies
 DROP POLICY IF EXISTS "Active promotions readable by public" ON public.promotions;
