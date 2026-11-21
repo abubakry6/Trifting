@@ -1,40 +1,46 @@
 # RENCANA IMPLEMENTASI REVISI (revisi.md)
-# Topik: Penguncian Keamanan Kredensial & Kata Sandi Khusus Super Admin
+# Topik: Pembuatan Bucket Storage Supabase & Fitur Upload Foto Langsung di Modal Admin
 
 ================================================================================
-1. AKAR MASALAH (ROOT CAUSE ANALYSIS)
+1. AKAR MASALAH (ROOT CAUSE ANALYSIS DARI DUA TANGKAPAN LAYAR)
 ================================================================================
-Saat ini di halaman `/admin/login`:
-1. **Validasi Terlalu Longgar:** Sistem hanya mengecek apakah email mengandung kata "admin" dan panjang kata sandi minimal 6 karakter (`password.length >= 6`).
-2. **Tidak Ada Pengecekan Kata Sandi Riil:** Siapapun yang memasukkan email apa saja yang ada kata "admin" (misal: `siapapunadmin@gmail.com`) dengan kata sandi sembarang (misal: `123456`) bisa langsung masuk dan mengelola dashboard admin.
-3. **Kata Sandi Belum Ditetapkan:** Belum ada kredensial pasti (*fixed master credentials*) atau verifikasi server-side untuk memastikan hanya pemilik toko sah yang memiliki kunci masuk.
+Berdasarkan 2 foto terbaru yang Anda kirim:
+1. **Foto 1 (Halaman Storage Supabase):**
+   Anda membuka halaman *Storage > Files*, tetapi di sana tertulis *"Create a file bucket"* dengan tombol hijau `+ New bucket`. Artinya **belum ada folder wadah (bucket) penyimpanan foto yang dibuat di Supabase Anda**. Tanpa bucket, file foto belum memiliki tempat tersimpan di cloud Supabase.
+2. **Foto 2 (Halaman Table Editor Products):**
+   Tabel `products` masih kosong (0 records) karena script SQL Seed pengisi katalog pakaian belum dieksekusi di menu SQL Editor.
+3. **Kendala Pengalaman Pengguna (User Experience):**
+   Saat ini admin harus menyalin URL teks secara manual. Hal ini menyulitkan pemilik toko yang ingin langsung memilih foto dari galeri HP atau folder laptop saat menambah produk.
 
 ================================================================================
-2. FILE YANG AKAN DIBUAT & DIUBAH (AFFECTED FILES)
+2. PANDUAN LANGKAH DI SUPABASE (HANYA 10 DETIK)
 ================================================================================
-1. `src/app/api/admin/login/route.ts` (FILE BARU):
-   Endpoint API Server-Side untuk memverifikasi email dan kata sandi admin secara aman di server (mencegah kata sandi bocor di kode browser client-side).
-2. `.env.local` & `.env.example`:
-   Menambahkan variabel konfigurasi kredensial admin resmi:
-   - `ADMIN_EMAIL` (Default: `admin@trifting.com` / email pemilik)
-   - `ADMIN_PASSWORD` (Default: `TriftingMaster#2024` atau kata sandi kustom pilihan pemilik toko)
-3. `src/app/admin/login/page.tsx`:
-   Mengubah form login agar memverifikasi ke `/api/admin/login`. Jika email atau kata sandi tidak cocok 100%, akses ditolak secara mutlak dengan pesan peringatan keamanan.
-4. `src/context/AuthContext.tsx`:
-   Memperbarui fungsi login admin agar hanya menyimpan sesi admin jika telah tervalidasi secara resmi.
+Di tab browser Supabase yang sedang Anda buka (Foto 1):
+1. Klik tombol hijau **`+ New bucket`**.
+2. Masukkan nama bucket: **`product-images`**
+3. **PENTING:** Aktifkan sakelar **`Public bucket`** (geser hingga berwarna hijau/ON agar foto bisa dilihat oleh pembeli).
+4. Klik **Save**.
 
 ================================================================================
-3. LANGKAH-LANGKAH TEKNIS IMPLEMENTASI
+3. RENCANA PENYEMPURNAAN KODE ADMIN TOKO
 ================================================================================
-- [x] **Langkah 1:** Tambahkan variabel kredensial admin resmi di `.env.local` dan `.env.example`.
-- [x] **Langkah 2:** Buat API Route server-side `src/app/api/admin/login/route.ts` dengan enkripsi & validasi pencocokan kata sandi.
-- [x] **Langkah 3:** Modifikasi `src/app/admin/login/page.tsx` untuk memanggil API route dan menolak kredensial sembarangan.
-- [x] **Langkah 4:** Jalankan `npx tsc --noEmit` untuk memastikan integritas tipe data bebas error.
-- [x] **Langkah 5:** Commit dan push ke GitHub agar Vercel otomatis memperbarui sistem keamanan.
+- `src/app/admin/products/page.tsx` :
+  1. Tambahkan area **Upload Foto Langsung** (bisa klik pilih file foto JPG/PNG dari HP/Laptop atau seret foto).
+  2. Sistem otomatis mengunggah file yang dipilih ke Supabase Storage bucket `product-images` dan memunculkan pratinjau (*preview*) foto langsung di modal.
+  3. Ubah input URL manual menjadi fleksibel (`type="text"`) dengan Auto-Resolver jika pengguna ingin menempel link luar/nama file.
+- `src/context/StoreContext.tsx` :
+  Pastikan `categoryId` aman dari error foreign key (fallback null jika bukan UUID).
 
 ================================================================================
-4. ESTIMASI DAMPAK & RISIKO
+4. LANGKAH-LANGKAH TEKNIS IMPLEMENTASI
 ================================================================================
-- **Keamanan Total (Zero Vulnerability):** Orang lain tidak akan bisa lagi menebak atau masuk sembarangan ke portal admin.
-- Pemilik toko memiliki kendali penuh untuk mengganti email dan kata sandi admin kapan saja melalui Vercel / file `.env.local`.
-- Tidak ada dampak negatif terhadap pembeli biasa di katalog atau proses checkout.
+- [x] **Langkah 1:** Tambahkan input file upload langsung & preview thumbnail di modal `src/app/admin/products/page.tsx`.
+- [x] **Langkah 2:** Integrasikan fungsi upload langsung ke Supabase Storage API (`supabase.storage.from("product-images").upload(...)`).
+- [x] **Langkah 3:** Jalankan `npx tsc --noEmit` untuk verifikasi TypeScript.
+- [x] **Langkah 4:** Commit & push ke GitHub agar Vercel otomatis mengupdate produksi.
+
+================================================================================
+5. ESTIMASI DAMPAK & RISIKO
+================================================================================
+- Pemilik toko bisa menambah produk baru dengan **langsung memilih foto dari galeri HP/laptop** semudah di Instagram atau Tokopedia tanpa perlu repot copy-paste link manual lagi.
+- Nol risiko terhadap transaksi checkout atau tampilan beranda.

@@ -176,7 +176,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured && supabase) {
       try {
         const { categoryName, ...supabasePayload } = newProduct as any;
-        const { data, error } = await supabase.from("products").insert([supabasePayload]).select().single();
+        const cleanPayload = {
+          ...supabasePayload,
+          categoryId: isValidUUID(supabasePayload.categoryId) ? supabasePayload.categoryId : null,
+        };
+        const { data, error } = await supabase.from("products").insert([cleanPayload]).select().single();
         if (!error && data) {
           setProducts((prev) => [data, ...prev]);
           return data;
@@ -193,7 +197,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const updateProduct = async (id: string, updates: Partial<Product>): Promise<boolean> => {
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from("products").update(updates).eq("id", id);
+        const { categoryName, ...cleanUpdates } = updates as any;
+        if (cleanUpdates.categoryId !== undefined) {
+          cleanUpdates.categoryId = isValidUUID(cleanUpdates.categoryId) ? cleanUpdates.categoryId : null;
+        }
+        await supabase.from("products").update(cleanUpdates).eq("id", id);
       } catch (err) {
         console.error("Supabase update product error:", err);
       }

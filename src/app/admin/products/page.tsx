@@ -11,11 +11,14 @@ import {
   Check, 
   Shirt, 
   Sparkles,
-  SlidersHorizontal 
+  SlidersHorizontal,
+  Loader2,
+  Image as ImageIcon
 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { Product, ConditionGrade, ProductStatus } from "@/types/database";
 import { formatRupiah, slugify } from "@/lib/utils";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function AdminProductsPage() {
   const { products, categories, addProduct, updateProduct, deleteProduct } = useStore();
@@ -39,6 +42,53 @@ export default function AdminProductsPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [description, setDescription] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Ukuran file maksimal 5MB.");
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = fileName;
+
+        const { data, error } = await supabase.storage
+          .from("product-images")
+          .upload(filePath, file, { cacheControl: "3600", upsert: true });
+
+        if (!error && data) {
+          const { data: publicUrlData } = supabase.storage
+            .from("product-images")
+            .getPublicUrl(filePath);
+
+          if (publicUrlData?.publicUrl) {
+            setImageUrl(publicUrlData.publicUrl);
+            setIsUploadingImage(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Storage upload exception, fallback to local preview:", err);
+      }
+    }
+
+    // Fallback: Read as Base64 Data URL so it can be previewed and saved immediately
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImageUrl(reader.result as string);
+      setIsUploadingImage(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const conditionOptions: ConditionGrade[] = [
     "Grade A+ (Like New)",
@@ -105,8 +155,22 @@ export default function AdminProductsPage() {
     }
 
     const categoryObj = categories.find((c) => c.id === categoryId);
-    const imagesArray = imageUrl.trim()
-      ? [imageUrl.trim()]
+    let finalImageUrl = imageUrl.trim();
+
+    // Auto-resolve if user pasted just a filename or relative path
+    if (
+      finalImageUrl &&
+      !finalImageUrl.startsWith("http://") &&
+      !finalImageUrl.startsWith("https://") &&
+      !finalImageUrl.startsWith("data:")
+    ) {
+      const sbUrl =
+        process.env.NEXT_PUBLIC_SUPABASE_URL || "https://sqawuxrsefptxdjjmezu.supabase.co";
+      finalImageUrl = `${sbUrl}/storage/v1/object/public/product-images/${finalImageUrl}`;
+    }
+
+    const imagesArray = finalImageUrl
+      ? [finalImageUrl]
       : ["https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"];
 
     if (editingProduct) {
@@ -447,15 +511,57 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-[#3F3F46] mb-1">URL Foto Produk (Supabase Storage / Web URL)</label>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="w-full bg-[#FAF9F5] border border-[#E5E4DE] rounded-xl p-2.5 text-[#0F1012]"
-                />
+              {/* Image Upload & Preview Section */}
+              <div className="space-y-2">
+                <label className="block font-bold text-[#3F3F46]">
+                  Foto Produk Thrift (Pilih dari HP/Laptop atau Masukkan Link)
+                </label>
+
+                {/* File Upload Box */}
+                <div className="border-2 border-dashed border-[#D4D4D8] hover:border-[#3A4D28] rounded-2xl p-4 bg-[#FAF9F5] text-center transition cursor-pointer relative">
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    disabled={isUploadingImage}
+                  />
+                  {isUploadingImage ? (
+                    <div className="flex flex-col items-center justify-center py-3 text-[#3A4D28]">
+                      <Loader2 className="w-6 h-6 animate-spin mb-1.5" />
+                      <span className="text-xs font-bold">Mengunggah foto ke Supabase Storage...</span>
+                    </div>
+                  ) : imageUrl ? (
+                    <div className="flex items-center gap-4 text-left">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#E5E4DE] bg-white shrink-0">
+                        <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-black text-[#0F1012] block">Foto Siap Digunakan</span>
+                        <span className="text-[11px] text-[#71717A] truncate block">{imageUrl}</span>
+                        <span className="text-[10px] text-[#3A4D28] font-bold mt-0.5 inline-block">Klik kotak ini untuk ganti foto</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-3 text-[#71717A]">
+                      <Upload className="w-6 h-6 text-[#3A4D28] mb-1.5" />
+                      <span className="text-xs font-bold text-[#0F1012]">Klik untuk pilih foto dari Galeri HP / Laptop</span>
+                      <span className="text-[10px] text-[#A1A1AA] mt-0.5">Format JPG, PNG, atau WEBP (Maksimal 5MB)</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Optional Manual URL Input */}
+                <div className="pt-1">
+                  <span className="text-[11px] text-[#71717A] block mb-1">Atau masukkan Link / Nama File foto secara manual:</span>
+                  <input
+                    type="text"
+                    placeholder="https://... atau nama-file.png"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    className="w-full bg-white border border-[#E5E4DE] rounded-xl p-2.5 text-xs text-[#0F1012] placeholder:text-[#A1A1AA]"
+                  />
+                </div>
               </div>
 
               <div>

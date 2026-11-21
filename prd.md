@@ -261,3 +261,4 @@ ZONA BAWAH: MASTER CONTEXT & LOGIKA SISTEM TERKINI (LIVING CONTEXT)
   - v1.0.2: Mobile Responsive Polish (Perbaikan laci keranjang belanja `CartDrawer.tsx` agar pas di layar ponsel tanpa celah samping dan tanpa teks/tombol terpotong).
   - v1.0.3: Relational Transaction Architecture & Supabase Sync (Perbaikan struktur transaksi pesanan: penggunaan ID berstandar UUID v4, pemisahan rincian produk ke tabel `orderitems`, relasi guest checkout aman, serta perbaruan RLS policies untuk pembacaan real-time di Dashboard Admin).
   - v1.0.4: Master Admin Security Hardening (Penguncian mutlak portal admin via API Server-Side `/api/admin/login` dengan fixed master credentials yang tervalidasi ketat dan anti-bypass).
+  - v1.0.5: Direct Photo Upload & Auto-Resolver (Fitur upload foto langsung dari galeri HP/laptop ke Supabase Storage `product-images`, thumbnail preview instan, auto-resolve nama file, dan pengaman relasi `categoryId` UUID).
