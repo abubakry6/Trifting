@@ -173,27 +173,24 @@ CREATE POLICY "Promotions manageable by admin" ON public.promotions
 
 -- Orders Policies
 DROP POLICY IF EXISTS "Orders readable by owner or admin" ON public.orders;
-CREATE POLICY "Orders readable by owner or admin" ON public.orders
-    FOR SELECT USING (auth.uid() = "userId" OR public.is_admin());
+DROP POLICY IF EXISTS "Orders readable by all" ON public.orders;
+CREATE POLICY "Orders readable by all" ON public.orders
+    FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Public can insert orders" ON public.orders;
 CREATE POLICY "Public can insert orders" ON public.orders
     FOR INSERT WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Orders updateable by admin" ON public.orders;
-CREATE POLICY "Orders updateable by admin" ON public.orders
-    FOR UPDATE USING (public.is_admin());
+DROP POLICY IF EXISTS "Orders updateable by all" ON public.orders;
+CREATE POLICY "Orders updateable by all" ON public.orders
+    FOR UPDATE USING (true);
 
 -- OrderItems Policies
 DROP POLICY IF EXISTS "Order items readable by owner or admin" ON public.orderitems;
-CREATE POLICY "Order items readable by owner or admin" ON public.orderitems
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.orders
-            WHERE orders.id = orderitems."orderId"
-            AND (orders."userId" = auth.uid() OR public.is_admin())
-        )
-    );
+DROP POLICY IF EXISTS "Order items readable by all" ON public.orderitems;
+CREATE POLICY "Order items readable by all" ON public.orderitems
+    FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Public can insert order items" ON public.orderitems;
 CREATE POLICY "Public can insert order items" ON public.orderitems

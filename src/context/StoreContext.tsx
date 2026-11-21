@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { Product, Category, Order, Promotion } from "@/types/database";
 import { initialProducts, initialCategories, initialPromotions } from "@/lib/mockData";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
+import { generateUUID, isValidUUID } from "@/lib/utils";
 
 interface StoreContextType {
   products: Product[];
@@ -66,8 +67,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           initLocalCategories();
         }
 
-        if (orderRes.data) {
-          setOrders(orderRes.data);
+        if (orderRes.data && orderRes.data.length > 0) {
+          const mappedOrders: Order[] = orderRes.data.map((ord: any) => ({
+            ...ord,
+            items: ord.orderitems && ord.orderitems.length > 0 ? ord.orderitems : ord.items || [],
+          }));
+          setOrders(mappedOrders);
+          try {
+            localStorage.setItem("trifting_orders", JSON.stringify(mappedOrders));
+          } catch {}
+        } else {
+          const savedOrders = localStorage.getItem("trifting_orders");
+          if (savedOrders) {
+            try {
+              setOrders(JSON.parse(savedOrders));
+            } catch {}
+          }
         }
 
         if (promoRes.data && promoRes.data.length > 0) {
@@ -151,15 +166,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [orders]);
 
   const addProduct = async (productData: Omit<Product, "id" | "createdAt">): Promise<Product> => {
+    const prodId = generateUUID();
     const newProduct: Product = {
       ...productData,
-      id: "prod-" + Date.now(),
+      id: prodId,
       createdAt: new Date().toISOString(),
     };
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error } = await supabase.from("products").insert([newProduct]).select().single();
+        const { categoryName, ...supabasePayload } = newProduct as any;
+        const { data, error } = await supabase.from("products").insert([supabasePayload]).select().single();
         if (!error && data) {
           setProducts((prev) => [data, ...prev]);
           return data;
@@ -200,10 +217,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addOrder = async (orderData: Omit<Order, "id" | "createdAt">): Promise<Order> => {
+    const orderId = generateUUID();
+    const createdAt = new Date().toISOString();
+
     const newOrder: Order = {
       ...orderData,
-      id: "ord-" + Date.now(),
-      createdAt: new Date().toISOString(),
+      id: orderId,
+      createdAt,
     };
 
     // Mark purchased products as 'sold'
@@ -215,24 +235,60 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       if (isSupabaseConfigured && supabase) {
         try {
-          await supabase.from("products").update({ status: "sold" }).in("id", productIds);
-        } catch {}
+          const validProductUuids = productIds.filter(isValidUUID);
+          if (validProductUuids.length > 0) {
+            await supabase.from("products").update({ status: "sold" }).in("id", validProductUuids);
+          }
+        } catch (err) {
+          console.error("Error updating product status in Supabase:", err);
+        }
       }
     }
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data } = await supabase.from("orders").insert([newOrder]).select().single();
-        if (data) {
-          setOrders((prev) => [data, ...prev]);
-          return data;
+        // Strip out 'items' before inserting into orders table
+        const { items: orderItemsList, ...orderWithoutItems } = newOrder;
+
+        const cleanOrderPayload = {
+          ...orderWithoutItems,
+          id: orderId,
+          userId: isValidUUID(orderWithoutItems.userId) ? orderWithoutItems.userId : null,
+        };
+
+        const { error: insertOrderErr } = await supabase.from("orders").insert([cleanOrderPayload]);
+        if (insertOrderErr) {
+          console.error("Supabase insert order error:", insertOrderErr);
+        }
+
+        // Insert order items into orderitems table
+        if (orderItemsList && orderItemsList.length > 0) {
+          const itemsPayload = orderItemsList.map((item) => ({
+            id: generateUUID(),
+            orderId: orderId,
+            productId: isValidUUID(item.productId) ? item.productId : null,
+            productTitle: item.productTitle,
+            productPrice: item.productPrice,
+            productSize: item.productSize || "",
+            productImage: item.productImage || "",
+          }));
+
+          const { error: insertItemsErr } = await supabase.from("orderitems").insert(itemsPayload);
+          if (insertItemsErr) {
+            console.error("Supabase insert orderitems error:", insertItemsErr);
+          }
         }
       } catch (err) {
-        console.error("Supabase insert order error:", err);
+        console.error("Supabase insert order transaction error:", err);
       }
     }
 
     setOrders((prev) => [newOrder, ...prev]);
+    try {
+      const existing = JSON.parse(localStorage.getItem("trifting_orders") || "[]");
+      localStorage.setItem("trifting_orders", JSON.stringify([newOrder, ...existing]));
+    } catch {}
+
     return newOrder;
   };
 
