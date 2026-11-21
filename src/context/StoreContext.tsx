@@ -50,13 +50,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           supabase.from("promotions").select("*"),
         ]);
 
+        let remoteProducts: Product[] = [];
         if (prodRes.data && prodRes.data.length > 0) {
-          setProducts(
-            prodRes.data.map((p) => ({
-              ...p,
-              categoryName: p.categories?.name,
-            }))
-          );
+          remoteProducts = prodRes.data.map((p) => ({
+            ...p,
+            categoryName: p.categories?.name,
+          }));
+        }
+
+        // Dual-Sync Merge: Combine Supabase remote products with local products
+        let mergedProducts: Product[] = [...remoteProducts];
+        try {
+          const saved = localStorage.getItem("trifting_products");
+          if (saved) {
+            const localProducts: Product[] = JSON.parse(saved);
+            for (const lp of localProducts) {
+              if (!mergedProducts.some((p) => p.id === lp.id || (p.slug && p.slug === lp.slug))) {
+                mergedProducts.unshift(lp);
+              }
+            }
+          }
+        } catch {}
+
+        if (mergedProducts.length > 0) {
+          setProducts(mergedProducts);
+          try {
+            localStorage.setItem("trifting_products", JSON.stringify(mergedProducts));
+          } catch {}
         } else {
           initLocalProducts();
         }
@@ -180,17 +200,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           ...supabasePayload,
           categoryId: isValidUUID(supabasePayload.categoryId) ? supabasePayload.categoryId : null,
         };
-        const { data, error } = await supabase.from("products").insert([cleanPayload]).select().single();
-        if (!error && data) {
-          setProducts((prev) => [data, ...prev]);
-          return data;
+        const { error } = await supabase.from("products").insert([cleanPayload]);
+        if (error) {
+          console.warn("Supabase insert product warning:", error);
         }
       } catch (err) {
         console.error("Supabase insert product error:", err);
       }
     }
 
-    setProducts((prev) => [newProduct, ...prev]);
+    setProducts((prev) => {
+      const updated = [newProduct, ...prev.filter((p) => p.id !== newProduct.id)];
+      try {
+        localStorage.setItem("trifting_products", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
     return newProduct;
   };
 

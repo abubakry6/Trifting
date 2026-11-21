@@ -49,10 +49,10 @@ function CatalogContent() {
       .filter((p) => {
         // Search query
         if (searchQuery.trim()) {
-          const query = searchQuery.toLowerCase();
-          const matchesTitle = p.title.toLowerCase().includes(query);
-          const matchesBrand = p.brand.toLowerCase().includes(query);
-          const matchesDesc = p.description.toLowerCase().includes(query);
+          const query = searchQuery.trim().toLowerCase();
+          const matchesTitle = p.title ? p.title.toLowerCase().includes(query) : false;
+          const matchesBrand = p.brand ? p.brand.toLowerCase().includes(query) : false;
+          const matchesDesc = p.description ? p.description.toLowerCase().includes(query) : false;
           if (!matchesTitle && !matchesBrand && !matchesDesc) return false;
         }
 
