@@ -44,50 +44,90 @@ export default function AdminProductsPage() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  const compressImage = (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => resolve(blob || file),
+          "image/jpeg",
+          0.85
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+      img.src = objectUrl;
+    });
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Ukuran file maksimal 5MB.");
-      return;
-    }
-
     setIsUploadingImage(true);
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = fileName;
+    try {
+      // Auto-compress photo to lightweight ~150KB JPEG
+      const compressedBlob = await compressImage(file);
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
 
-        const { data, error } = await supabase.storage
-          .from("product-images")
-          .upload(filePath, file, { cacheControl: "3600", upsert: true });
-
-        if (!error && data) {
-          const { data: publicUrlData } = supabase.storage
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data, error } = await supabase.storage
             .from("product-images")
-            .getPublicUrl(filePath);
+            .upload(fileName, compressedBlob, {
+              contentType: "image/jpeg",
+              cacheControl: "3600",
+              upsert: true,
+            });
 
-          if (publicUrlData?.publicUrl) {
-            setImageUrl(publicUrlData.publicUrl);
-            setIsUploadingImage(false);
-            return;
+          if (!error && data) {
+            const { data: publicUrlData } = supabase.storage
+              .from("product-images")
+              .getPublicUrl(fileName);
+
+            if (publicUrlData?.publicUrl) {
+              setImageUrl(publicUrlData.publicUrl);
+              setIsUploadingImage(false);
+              return;
+            }
           }
+        } catch (err) {
+          console.warn("Supabase storage upload exception:", err);
         }
-      } catch (err) {
-        console.warn("Storage upload exception, fallback to local preview:", err);
       }
-    }
 
-    // Fallback: Read as Base64 Data URL so it can be previewed and saved immediately
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImageUrl(reader.result as string);
+      // Fallback: Read the COMPRESSED blob (~150KB) so it can be previewed & saved without payload limits
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+        setIsUploadingImage(false);
+      };
+      reader.readAsDataURL(compressedBlob);
+    } catch (err) {
+      console.error("Image processing error:", err);
       setIsUploadingImage(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const conditionOptions: ConditionGrade[] = [

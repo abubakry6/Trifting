@@ -226,8 +226,25 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- =====================================================================
--- STORAGE BUCKET: product-images (Bisa diaktifkan di Supabase Dashboard)
+-- STORAGE BUCKET: product-images (Otomatis Buat Wadah & Izin Upload)
 -- =====================================================================
--- INSERT INTO storage.buckets (id, name, public) 
--- VALUES ('product-images', 'product-images', true)
--- ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('product-images', 'product-images', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Storage Policies: Izin upload foto produk untuk website
+DROP POLICY IF EXISTS "Public can upload product images" ON storage.objects;
+CREATE POLICY "Public can upload product images" ON storage.objects
+    FOR INSERT WITH CHECK (bucket_id = 'product-images');
+
+DROP POLICY IF EXISTS "Public can view product images" ON storage.objects;
+CREATE POLICY "Public can view product images" ON storage.objects
+    FOR SELECT USING (bucket_id = 'product-images');
+
+DROP POLICY IF EXISTS "Public can update product images" ON storage.objects;
+CREATE POLICY "Public can update product images" ON storage.objects
+    FOR UPDATE USING (bucket_id = 'product-images');
+
+DROP POLICY IF EXISTS "Public can delete product images" ON storage.objects;
+CREATE POLICY "Public can delete product images" ON storage.objects
+    FOR DELETE USING (bucket_id = 'product-images');
