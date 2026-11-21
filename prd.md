@@ -258,3 +258,4 @@ ZONA BAWAH: MASTER CONTEXT & LOGIKA SISTEM TERKINI (LIVING CONTEXT)
 - **Log Pembaruan Resmi:**
   - v1.0.0: Pembangunan arsitektur lengkap toko dan dashboard admin.
   - v1.0.1: Security Hardening (Penguncian portal admin dengan Route Guard 403, gerbang `/admin/login`, pembersihan tombol demo admin publik, dan isolasi link internal dari footer/navbar).
+  - v1.0.2: Mobile Responsive Polish (Perbaikan laci keranjang belanja `CartDrawer.tsx` agar pas di layar ponsel tanpa celah samping dan tanpa teks/tombol terpotong).
