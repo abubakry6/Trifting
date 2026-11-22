@@ -32,6 +32,53 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const syncProductToSupabase = async (prod: Product) => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { categoryName, ...supabasePayload } = prod as any;
+      const cleanPayload = {
+        ...supabasePayload,
+        id: isValidUUID(prod.id) ? prod.id : generateUUID(),
+        categoryId: isValidUUID(supabasePayload.categoryId) ? supabasePayload.categoryId : null,
+        images: normalizeImages(supabasePayload.images),
+        lengthCm: supabasePayload.lengthCm ? Number(supabasePayload.lengthCm) : null,
+        widthCm: supabasePayload.widthCm ? Number(supabasePayload.widthCm) : null,
+        originalPrice: supabasePayload.originalPrice ? Number(supabasePayload.originalPrice) : null,
+      };
+      await supabase.from("products").insert([cleanPayload]);
+    } catch {}
+  };
+
+  const syncOrderToSupabase = async (order: Order) => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { items: orderItemsList, ...orderWithoutItems } = order;
+      const cleanOrderId = isValidUUID(order.id) ? order.id : generateUUID();
+      const cleanOrderPayload = {
+        ...orderWithoutItems,
+        id: cleanOrderId,
+        userId: isValidUUID(orderWithoutItems.userId) ? orderWithoutItems.userId : null,
+      };
+
+      const { error: insertErr } = await supabase.from("orders").insert([cleanOrderPayload]);
+      if (insertErr) return;
+
+      if (orderItemsList && orderItemsList.length > 0) {
+        const itemsPayload = orderItemsList.map((item) => ({
+          id: generateUUID(),
+          orderId: cleanOrderId,
+          productId: isValidUUID(item.productId) ? item.productId : null,
+          productTitle: item.productTitle,
+          productPrice: item.productPrice,
+          productSize: item.productSize || "",
+          productImage: item.productImage || "",
+        }));
+
+        await supabase.from("orderitems").insert(itemsPayload);
+      }
+    } catch {}
+  };
+
   // Initialize and load data
   useEffect(() => {
     loadData();
@@ -71,6 +118,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             for (const lp of localProducts) {
               if (!mergedProducts.some((p) => p.id === lp.id || (p.slug && p.slug === lp.slug))) {
                 mergedProducts.unshift(lp);
+                syncProductToSupabase(lp);
               }
             }
           }
@@ -91,23 +139,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           initLocalCategories();
         }
 
+        let remoteOrders: Order[] = [];
         if (orderRes.data && orderRes.data.length > 0) {
-          const mappedOrders: Order[] = orderRes.data.map((ord: any) => ({
+          remoteOrders = orderRes.data.map((ord: any) => ({
             ...ord,
             items: ord.orderitems && ord.orderitems.length > 0 ? ord.orderitems : ord.items || [],
           }));
-          setOrders(mappedOrders);
-          try {
-            localStorage.setItem("trifting_orders", JSON.stringify(mappedOrders));
-          } catch {}
-        } else {
+        }
+
+        // Dual-Sync Merge for Orders: Sinkronisasi pesanan dari HP & Laptop ke Cloud
+        let mergedOrders: Order[] = [...remoteOrders];
+        try {
           const savedOrders = localStorage.getItem("trifting_orders");
           if (savedOrders) {
-            try {
-              setOrders(JSON.parse(savedOrders));
-            } catch {}
+            const localOrders: Order[] = JSON.parse(savedOrders);
+            for (const lo of localOrders) {
+              if (!mergedOrders.some((o) => o.id === lo.id || o.orderNumber === lo.orderNumber)) {
+                mergedOrders.unshift(lo);
+                syncOrderToSupabase(lo);
+              }
+            }
           }
-        }
+        } catch {}
+
+        setOrders(mergedOrders);
+        try {
+          localStorage.setItem("trifting_orders", JSON.stringify(mergedOrders));
+        } catch {}
 
         if (promoRes.data && promoRes.data.length > 0) {
           setPromotions(promoRes.data);

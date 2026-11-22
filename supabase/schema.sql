@@ -176,30 +176,23 @@ DROP POLICY IF EXISTS "Promotions manageable by admin" ON public.promotions;
 CREATE POLICY "Promotions manageable by admin" ON public.promotions
     FOR ALL USING (public.is_admin());
 
--- Orders Policies
+-- Orders Policies (Full Access for Customer Checkout & Admin Management)
 DROP POLICY IF EXISTS "Orders readable by owner or admin" ON public.orders;
 DROP POLICY IF EXISTS "Orders readable by all" ON public.orders;
-CREATE POLICY "Orders readable by all" ON public.orders
-    FOR SELECT USING (true);
-
 DROP POLICY IF EXISTS "Public can insert orders" ON public.orders;
-CREATE POLICY "Public can insert orders" ON public.orders
-    FOR INSERT WITH CHECK (true);
-
 DROP POLICY IF EXISTS "Orders updateable by admin" ON public.orders;
 DROP POLICY IF EXISTS "Orders updateable by all" ON public.orders;
-CREATE POLICY "Orders updateable by all" ON public.orders
-    FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Orders manageable by all" ON public.orders;
+CREATE POLICY "Orders manageable by all" ON public.orders
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- OrderItems Policies
 DROP POLICY IF EXISTS "Order items readable by owner or admin" ON public.orderitems;
 DROP POLICY IF EXISTS "Order items readable by all" ON public.orderitems;
-CREATE POLICY "Order items readable by all" ON public.orderitems
-    FOR SELECT USING (true);
-
 DROP POLICY IF EXISTS "Public can insert order items" ON public.orderitems;
-CREATE POLICY "Public can insert order items" ON public.orderitems
-    FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Order items manageable by all" ON public.orderitems;
+CREATE POLICY "Order items manageable by all" ON public.orderitems
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- Wishlists Policies
 DROP POLICY IF EXISTS "Wishlist manageable by owner" ON public.wishlists;
