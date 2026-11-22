@@ -277,7 +277,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
         const { error } = await supabase.from("products").insert([cleanPayload]);
         if (error) {
-          console.warn("Supabase insert product warning:", error);
+          console.error("Supabase insert product error:", error);
+          if (typeof window !== "undefined") {
+            alert(
+              `⚠️ Peringatan Sinkronisasi Cloud:\nProduk tersimpan di browser ini, tetapi GAGAL masuk ke Database Supabase.\n\nPesan Supabase: ${error.message} (Kode: ${error.code})\n\n💡 Solusi: Pintu izin Supabase (RLS) masih terkunci. Silakan buka Supabase SQL Editor dan klik 'Run' pada script SQL yang diberikan ZettBOT.`
+            );
+          }
+        } else {
+          if (typeof window !== "undefined") {
+            alert("✅ Berhasil!\nProduk telah tersimpan ke Database Cloud Supabase dan akan tampil di seluruh perangkat pelanggan.");
+          }
         }
       } catch (err) {
         console.error("Supabase insert product error:", err);

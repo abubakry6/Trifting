@@ -13,7 +13,9 @@ import {
   Sparkles,
   SlidersHorizontal,
   Loader2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { Product, ConditionGrade, ProductStatus } from "@/types/database";
@@ -27,6 +29,46 @@ export default function AdminProductsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  const sqlFixScript = `-- 1. Buka izin tabel products (INSERT, SELECT, UPDATE, DELETE)
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Products are readable by everyone" ON public.products;
+CREATE POLICY "Products are readable by everyone" ON public.products FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Products manageable by admin" ON public.products;
+DROP POLICY IF EXISTS "Products manageable by all" ON public.products;
+CREATE POLICY "Products manageable by all" ON public.products FOR ALL USING (true) WITH CHECK (true);
+
+-- 2. Dukungan status inactive pada produk
+ALTER TABLE public.products DROP CONSTRAINT IF EXISTS products_status_check;
+ALTER TABLE public.products ADD CONSTRAINT products_status_check CHECK (status IN ('available', 'reserved', 'sold', 'inactive'));
+
+-- 3. Buka izin tabel orders & orderitems (Pesanan Pelanggan)
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Orders manageable by all" ON public.orders;
+CREATE POLICY "Orders manageable by all" ON public.orders FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.orderitems ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Order items manageable by all" ON public.orderitems;
+CREATE POLICY "Order items manageable by all" ON public.orderitems FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. Buka izin Supabase Storage (Wadah Foto Produk)
+INSERT INTO storage.buckets (id, name, public) VALUES ('product-images', 'product-images', true) ON CONFLICT (id) DO UPDATE SET public = true;
+DROP POLICY IF EXISTS "Public can upload product images" ON storage.objects;
+CREATE POLICY "Public can upload product images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'product-images');
+DROP POLICY IF EXISTS "Public can view product images" ON storage.objects;
+CREATE POLICY "Public can view product images" ON storage.objects FOR SELECT USING (bucket_id = 'product-images');
+DROP POLICY IF EXISTS "Public can update product images" ON storage.objects;
+CREATE POLICY "Public can update product images" ON storage.objects FOR UPDATE USING (bucket_id = 'product-images');`;
+
+  const copyToClipboard = () => {
+    if (typeof navigator !== "undefined") {
+      navigator.clipboard.writeText(sqlFixScript);
+      setCopiedSql(true);
+      setTimeout(() => setCopiedSql(false), 2500);
+    }
+  };
 
   // Form State
   const [title, setTitle] = useState("");
@@ -292,13 +334,23 @@ export default function AdminProductsPage() {
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0F1012] hover:bg-[#27272A] text-white text-xs font-bold rounded-xl shadow-lg transition"
-        >
-          <Plus className="w-4 h-4 text-[#4D6635]" />
-          <span>Tambah Item Thrift</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsSqlModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#FAF9F5] border border-[#E5E4DE] hover:border-[#3A4D28] text-[#0F1012] text-xs font-bold rounded-xl transition shadow-sm"
+          >
+            <Sparkles className="w-4 h-4 text-[#3A4D28]" />
+            <span>Kunci Database Supabase</span>
+          </button>
+
+          <button
+            onClick={openAddModal}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0F1012] hover:bg-[#27272A] text-white text-xs font-bold rounded-xl shadow-lg transition"
+          >
+            <Plus className="w-4 h-4 text-[#4D6635]" />
+            <span>Tambah Item Thrift</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -674,6 +726,70 @@ export default function AdminProductsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Buka Kunci Database Supabase (SQL Fix) */}
+      {isSqlModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-[#E5E4DE] space-y-5 animate-fade-in my-8">
+            <div className="flex items-start justify-between pb-3 border-b border-[#E5E4DE]">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#3A4D28]">PANDUAN 1 MENIT</span>
+                <h3 className="font-black text-lg text-[#0F1012]">
+                  Buka Izin Sinkronisasi Supabase Cloud
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsSqlModalOpen(false)}
+                className="p-1.5 text-[#71717A] hover:text-[#0F1012] rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#71717A] leading-relaxed">
+              Supabase secara default mengunci penambahan produk & pesanan (Error 42501). Jalankan script ini sekali saja di <b>Supabase SQL Editor</b> agar seluruh produk yang ditambahkan admin langsung tersimpan ke database cloud dan tampil di pelanggan.
+            </p>
+
+            <div className="relative">
+              <pre className="bg-[#0F1012] text-[#A1A1AA] text-[11px] p-4 rounded-xl overflow-x-auto max-h-56 font-mono leading-relaxed border border-white/10">
+                {sqlFixScript}
+              </pre>
+              <button
+                onClick={copyToClipboard}
+                className="absolute top-2.5 right-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#3A4D28] hover:bg-[#4D6635] text-white text-[11px] font-bold rounded-lg shadow transition"
+              >
+                {copiedSql ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Salin SQL</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="bg-[#FAF9F5] p-3.5 rounded-xl border border-[#E5E4DE] text-[11px] text-[#3F3F46] space-y-1.5">
+              <span className="font-bold block text-[#0F1012]">Langkah Cepat di Supabase:</span>
+              <p>1. Buka <b>Supabase SQL Editor</b> &rarr; klik tombol <b>+</b> &rarr; pilih <b>Create a new snippet</b>.</p>
+              <p>2. Tempelkan (paste) script SQL di atas.</p>
+              <p>3. Klik tombol hijau <b>Run</b> (atau tekan Ctrl+Enter).</p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setIsSqlModalOpen(false)}
+                className="px-5 py-2.5 bg-[#0F1012] text-white text-xs font-bold rounded-xl"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}
