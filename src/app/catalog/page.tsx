@@ -47,6 +47,9 @@ function CatalogContent() {
   const filteredProducts = useMemo(() => {
     return products
       .filter((p) => {
+        // Filter out inactive products (Target 5)
+        if (p.status === "inactive") return false;
+
         // Search query
         if (searchQuery.trim()) {
           const query = searchQuery.trim().toLowerCase();

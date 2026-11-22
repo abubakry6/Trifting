@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     "originalPrice" NUMERIC,
     images TEXT[] NOT NULL DEFAULT '{}',
     description TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'sold')),
+    status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'sold', 'inactive')),
     "isFeatured" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -152,9 +152,12 @@ CREATE POLICY "Categories are readable by everyone" ON public.categories
 DROP POLICY IF EXISTS "Categories manageable by admin" ON public.categories;
 DROP POLICY IF EXISTS "Categories manageable by all" ON public.categories;
 CREATE POLICY "Categories manageable by all" ON public.categories
-    FOR ALL USING (true);
+    FOR ALL USING (true) WITH CHECK (true);
 
--- Products Policies
+-- Products Policies & Status Migration
+ALTER TABLE public.products DROP CONSTRAINT IF EXISTS products_status_check;
+ALTER TABLE public.products ADD CONSTRAINT products_status_check CHECK (status IN ('available', 'reserved', 'sold', 'inactive'));
+
 DROP POLICY IF EXISTS "Products are readable by everyone" ON public.products;
 CREATE POLICY "Products are readable by everyone" ON public.products
     FOR SELECT USING (true);
@@ -162,7 +165,7 @@ CREATE POLICY "Products are readable by everyone" ON public.products
 DROP POLICY IF EXISTS "Products manageable by admin" ON public.products;
 DROP POLICY IF EXISTS "Products manageable by all" ON public.products;
 CREATE POLICY "Products manageable by all" ON public.products
-    FOR ALL USING (true);
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- Promotions Policies
 DROP POLICY IF EXISTS "Active promotions readable by public" ON public.promotions;

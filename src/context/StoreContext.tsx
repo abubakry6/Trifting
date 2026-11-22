@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { Product, Category, Order, Promotion } from "@/types/database";
 import { initialProducts, initialCategories, initialPromotions } from "@/lib/mockData";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
-import { generateUUID, isValidUUID } from "@/lib/utils";
+import { generateUUID, isValidUUID, normalizeImages, DEFAULT_PRODUCT_IMAGE } from "@/lib/utils";
 
 interface StoreContextType {
   products: Product[];
@@ -55,6 +55,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           remoteProducts = prodRes.data.map((p) => ({
             ...p,
             categoryName: p.categories?.name,
+            images: normalizeImages(p.images),
           }));
         }
 
@@ -63,7 +64,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         try {
           const saved = localStorage.getItem("trifting_products");
           if (saved) {
-            const localProducts: Product[] = JSON.parse(saved);
+            const localProducts: Product[] = JSON.parse(saved).map((lp: any) => ({
+              ...lp,
+              images: normalizeImages(lp.images),
+            }));
             for (const lp of localProducts) {
               if (!mergedProducts.some((p) => p.id === lp.id || (p.slug && p.slug === lp.slug))) {
                 mergedProducts.unshift(lp);
@@ -125,10 +129,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem("trifting_products");
       if (saved) {
-        setProducts(JSON.parse(saved));
+        const parsed = JSON.parse(saved).map((p: any) => ({
+          ...p,
+          images: normalizeImages(p.images),
+        }));
+        setProducts(parsed);
       } else {
-        setProducts(initialProducts);
-        localStorage.setItem("trifting_products", JSON.stringify(initialProducts));
+        const mapped = initialProducts.map((p) => ({
+          ...p,
+          images: normalizeImages(p.images),
+        }));
+        setProducts(mapped);
+        localStorage.setItem("trifting_products", JSON.stringify(mapped));
       }
     } catch {
       setProducts(initialProducts);
@@ -190,6 +202,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const newProduct: Product = {
       ...productData,
       id: prodId,
+      images: normalizeImages(productData.images),
       createdAt: new Date().toISOString(),
     };
 
@@ -199,6 +212,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const cleanPayload = {
           ...supabasePayload,
           categoryId: isValidUUID(supabasePayload.categoryId) ? supabasePayload.categoryId : null,
+          images: normalizeImages(supabasePayload.images),
+          lengthCm: supabasePayload.lengthCm !== undefined && supabasePayload.lengthCm !== "" ? Number(supabasePayload.lengthCm) : null,
+          widthCm: supabasePayload.widthCm !== undefined && supabasePayload.widthCm !== "" ? Number(supabasePayload.widthCm) : null,
+          originalPrice: supabasePayload.originalPrice !== undefined && supabasePayload.originalPrice !== "" ? Number(supabasePayload.originalPrice) : null,
         };
         const { error } = await supabase.from("products").insert([cleanPayload]);
         if (error) {
@@ -226,6 +243,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const { categoryName, ...cleanUpdates } = updates as any;
         if (cleanUpdates.categoryId !== undefined) {
           cleanUpdates.categoryId = isValidUUID(cleanUpdates.categoryId) ? cleanUpdates.categoryId : null;
+        }
+        if (cleanUpdates.images) {
+          cleanUpdates.images = normalizeImages(cleanUpdates.images);
+        }
+        if (cleanUpdates.lengthCm !== undefined) {
+          cleanUpdates.lengthCm = cleanUpdates.lengthCm !== "" && cleanUpdates.lengthCm !== null ? Number(cleanUpdates.lengthCm) : null;
+        }
+        if (cleanUpdates.widthCm !== undefined) {
+          cleanUpdates.widthCm = cleanUpdates.widthCm !== "" && cleanUpdates.widthCm !== null ? Number(cleanUpdates.widthCm) : null;
+        }
+        if (cleanUpdates.originalPrice !== undefined) {
+          cleanUpdates.originalPrice = cleanUpdates.originalPrice !== "" && cleanUpdates.originalPrice !== null ? Number(cleanUpdates.originalPrice) : null;
         }
         await supabase.from("products").update(cleanUpdates).eq("id", id);
       } catch (err) {

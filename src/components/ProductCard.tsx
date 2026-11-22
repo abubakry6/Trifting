@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Heart, ShoppingBag, Check } from "lucide-react";
 import { Product } from "@/types/database";
-import { formatRupiah } from "@/lib/utils";
+import { formatRupiah, getProductImage, DEFAULT_PRODUCT_IMAGE } from "@/lib/utils";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCart } from "@/context/CartContext";
 
@@ -19,11 +19,8 @@ export default function ProductCard({ product }: ProductCardProps) {
   const isSold = product.status === "sold";
   const inCart = items.some((item) => item.product.id === product.id);
 
-  // Fallback image if images array is empty
-  const mainImage =
-    product.images && product.images.length > 0
-      ? product.images[0]
-      : "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80";
+  // Bulletproof image parsing and fallback
+  const mainImage = getProductImage(product);
 
   return (
     <div className="group relative bg-white border border-[#E5E4DE] rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col justify-between">
@@ -72,6 +69,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             alt={product.title}
             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
+            onError={(e) => {
+              e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+            }}
           />
         </Link>
       </div>

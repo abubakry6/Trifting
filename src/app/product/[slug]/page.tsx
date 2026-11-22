@@ -17,7 +17,7 @@ import {
 import { useStore } from "@/context/StoreContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { formatRupiah } from "@/lib/utils";
+import { formatRupiah, getProductImage, DEFAULT_PRODUCT_IMAGE } from "@/lib/utils";
 import ProductCard from "@/components/ProductCard";
 
 export default function ProductDetailPage() {
@@ -31,11 +31,11 @@ export default function ProductDetailPage() {
   const product = products.find((p) => p.slug === slug);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  if (!product) {
+  if (!product || product.status === "inactive") {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-2xl font-black text-[#0F1012]">Produk Tidak Ditemukan</h2>
-        <p className="text-xs text-[#71717A] mt-2">Item mungkin telah dihapus atau URL tidak valid.</p>
+        <h2 className="text-2xl font-black text-[#0F1012]">Produk Tidak Tersedia</h2>
+        <p className="text-xs text-[#71717A] mt-2">Item mungkin telah dinonaktifkan, dihapus, atau URL tidak valid.</p>
         <Link
           href="/catalog"
           className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-[#0F1012] text-white text-xs font-bold rounded-xl"
@@ -51,11 +51,12 @@ export default function ProductDetailPage() {
   const inWishlist = isInWishlist(product.id);
   const inCart = items.some((item) => item.product.id === product.id);
 
-  const images = product.images.length > 0 ? product.images : [
-    "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"
-  ];
+  const fallbackImage = getProductImage(product);
+  const images = Array.isArray(product.images) && product.images.length > 0
+    ? product.images.map(img => typeof img === 'string' && (img.startsWith('http') || img.startsWith('data:')) ? img : fallbackImage)
+    : [fallbackImage];
 
-  const currentImage = images[selectedImageIndex] || images[0];
+  const currentImage = images[selectedImageIndex] || fallbackImage;
 
   // WhatsApp Pre-filled link
   const waText = encodeURIComponent(
@@ -88,6 +89,9 @@ export default function ProductDetailPage() {
               src={currentImage}
               alt={product.title}
               className="w-full h-full object-cover object-center"
+              onError={(e) => {
+                e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+              }}
             />
 
             {/* Badges */}
@@ -121,7 +125,14 @@ export default function ProductDetailPage() {
                     selectedImageIndex === idx ? "border-[#0F1012] shadow-md scale-95" : "border-[#E5E4DE] opacity-70 hover:opacity-100"
                   }`}
                 >
-                  <img src={img} alt="Thumb" className="w-full h-full object-cover" />
+                  <img
+                    src={img}
+                    alt="Thumb"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+                    }}
+                  />
                 </button>
               ))}
             </div>

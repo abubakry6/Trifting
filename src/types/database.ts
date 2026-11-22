@@ -1,6 +1,6 @@
 export type Role = 'customer' | 'admin';
 
-export type ProductStatus = 'available' | 'reserved' | 'sold';
+export type ProductStatus = 'available' | 'reserved' | 'sold' | 'inactive';
 
 export type ConditionGrade = 
   | 'Grade A+ (Like New)' 

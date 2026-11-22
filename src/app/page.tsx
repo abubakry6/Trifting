@@ -12,8 +12,10 @@ import { useStore } from "@/context/StoreContext";
 export default function HomePage() {
   const { products, categories, isLoading } = useStore();
 
-  const featuredProducts = products.filter((p) => p.isFeatured).slice(0, 4);
-  const latestProducts = products.slice(0, 8);
+  const activeProducts = products.filter((p) => p.status !== "inactive");
+  const featuredCandidates = activeProducts.filter((p) => p.isFeatured);
+  const featuredProducts = (featuredCandidates.length > 0 ? featuredCandidates : activeProducts).slice(0, 4);
+  const latestProducts = activeProducts.slice(0, 8);
 
   return (
     <div className="space-y-12">

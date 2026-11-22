@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { Product, ConditionGrade, ProductStatus } from "@/types/database";
-import { formatRupiah, slugify } from "@/lib/utils";
+import { formatRupiah, slugify, getProductImage, DEFAULT_PRODUCT_IMAGE } from "@/lib/utils";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function AdminProductsPage() {
@@ -42,6 +42,7 @@ export default function AdminProductsPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [description, setDescription] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
+  const [status, setStatus] = useState<ProductStatus>("available");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const compressImage = (file: File): Promise<Blob> => {
@@ -165,6 +166,7 @@ export default function AdminProductsPage() {
     setOriginalPrice("");
     setImageUrl("");
     setDescription("");
+    setStatus("available");
     setIsFeatured(false);
     setIsModalOpen(true);
   };
@@ -181,8 +183,9 @@ export default function AdminProductsPage() {
     setConditionNotes(p.conditionNotes || "");
     setPrice(p.price);
     setOriginalPrice(p.originalPrice || "");
-    setImageUrl(p.images[0] || "");
+    setImageUrl(getProductImage(p));
     setDescription(p.description);
+    setStatus(p.status || "available");
     setIsFeatured(p.isFeatured);
     setIsModalOpen(true);
   };
@@ -211,7 +214,7 @@ export default function AdminProductsPage() {
 
     const imagesArray = finalImageUrl
       ? [finalImageUrl]
-      : ["https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"];
+      : [DEFAULT_PRODUCT_IMAGE];
 
     if (editingProduct) {
       await updateProduct(editingProduct.id, {
@@ -229,6 +232,7 @@ export default function AdminProductsPage() {
         originalPrice: originalPrice ? Number(originalPrice) : undefined,
         images: imagesArray,
         description,
+        status,
         isFeatured,
       });
     } else {
@@ -247,7 +251,7 @@ export default function AdminProductsPage() {
         originalPrice: originalPrice ? Number(originalPrice) : undefined,
         images: imagesArray,
         description,
-        status: "available",
+        status,
         isFeatured,
       });
     }
@@ -256,7 +260,13 @@ export default function AdminProductsPage() {
   };
 
   const toggleStatus = async (p: Product) => {
-    const newStatus: ProductStatus = p.status === "available" ? "sold" : "available";
+    const nextStatus: Record<ProductStatus, ProductStatus> = {
+      available: "sold",
+      sold: "inactive",
+      inactive: "available",
+      reserved: "available",
+    };
+    const newStatus = nextStatus[p.status] || "available";
     await updateProduct(p.id, { status: newStatus });
   };
 
@@ -305,7 +315,7 @@ export default function AdminProductsPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {["all", "available", "sold"].map((st) => (
+          {["all", "available", "sold", "inactive"].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
@@ -341,9 +351,12 @@ export default function AdminProductsPage() {
                 <tr key={p.id} className="hover:bg-[#FAF9F5]/60 transition">
                   <td className="p-3.5">
                     <img
-                      src={p.images[0] || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=200"}
+                      src={getProductImage(p)}
                       alt={p.title}
                       className="w-12 h-12 object-cover rounded-lg border border-[#E5E4DE] bg-[#FAF9F5]"
+                      onError={(e) => {
+                        e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+                      }}
                     />
                   </td>
                   <td className="p-3.5 max-w-xs">
@@ -374,11 +387,13 @@ export default function AdminProductsPage() {
                       className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full transition ${
                         p.status === "available"
                           ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                          : "bg-red-100 text-red-800 hover:bg-red-200"
+                          : p.status === "sold"
+                          ? "bg-red-100 text-red-800 hover:bg-red-200"
+                          : "bg-amber-100 text-amber-800 hover:bg-amber-200"
                       }`}
-                      title="Klik untuk ubah status"
+                      title="Klik untuk ubah status (Available -> Sold -> Inactive)"
                     >
-                      {p.status}
+                      {p.status === "inactive" ? "INACTIVE (DISEMBUNYIKAN)" : p.status}
                     </button>
                   </td>
                   <td className="p-3.5 text-right space-x-2">
@@ -615,17 +630,32 @@ export default function AdminProductsPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="featured"
-                  checked={isFeatured}
-                  onChange={(e) => setIsFeatured(e.target.checked)}
-                  className="accent-[#3A4D28] w-4 h-4 rounded"
-                />
-                <label htmlFor="featured" className="font-bold text-[#0F1012]">
-                  Tampilkan di Koleksi Unggulan (Featured Grail)
-                </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block font-bold text-[#3F3F46] mb-1">Status Ketersediaan *</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as ProductStatus)}
+                    className="w-full bg-[#FAF9F5] border border-[#E5E4DE] rounded-xl p-2.5 text-[#0F1012]"
+                  >
+                    <option value="available">Available (Aktif Dijual & Tampil)</option>
+                    <option value="sold">Sold (Ditandai Terjual)</option>
+                    <option value="inactive">Inactive (Disembunyikan dari Pelanggan)</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2 pt-6">
+                  <input
+                    type="checkbox"
+                    id="featured"
+                    checked={isFeatured}
+                    onChange={(e) => setIsFeatured(e.target.checked)}
+                    className="accent-[#3A4D28] w-4 h-4 rounded"
+                  />
+                  <label htmlFor="featured" className="font-bold text-[#0F1012]">
+                    Tampilkan di Koleksi Unggulan (Grail)
+                  </label>
+                </div>
               </div>
 
               <div className="pt-4 border-t border-[#E5E4DE] flex justify-end gap-3">
